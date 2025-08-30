@@ -1,0 +1,70 @@
+---
+- name: Install Java 8 on Ubuntu 22.04
+  hosts: host
+  become: yes
+  tasks:
+    - name: Create directory for Java installation
+      become: yes
+      file:
+        path: /opt/java
+        state: directory
+
+    - name: Download JDK tarball
+      become: yes
+      get_url:
+        url: "http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz"
+        dest: /opt/java/jdk-8u131-linux-x64.tar.gz
+        mode: 0644
+        headers:
+          Cookie: "oraclelicense=accept-securebackup-cookie"
+
+    - name: Extract JDK tarball
+      become: yes
+      unarchive:
+        src: /opt/java/jdk-8u131-linux-x64.tar.gz
+        dest: /opt/java
+        remote_src: yes
+        creates: /opt/java/jdk1.8.0_131
+
+    - name: Set up alternatives for java
+      alternatives:
+        name: java
+        link: /usr/bin/java
+        path: /opt/java/jdk1.8.0_131/bin/java
+        priority: 100
+
+    - name: Set up alternatives for javac
+      alternatives:
+        name: javac
+        link: /usr/bin/javac
+        path: /opt/java/jdk1.8.0_131/bin/javac
+        priority: 100
+
+    - name: Set up alternatives for jar
+      alternatives:
+        name: jar
+        link: /usr/bin/jar
+        path: /opt/java/jdk1.8.0_131/bin/jar
+        priority: 100
+
+    - name: Set JAVA_HOME and JRE_HOME variables in ~/.bashrc file
+      lineinfile:
+        path: /root/.bashrc
+        line: "{{ item }}"
+      with_items:
+        - 'export JAVA_HOME=/opt/java/jdk1.8.0_131'
+        - 'export JRE_HOME=/opt/java/jdk1.8.0_131'
+        - 'export PATH=$JAVA_HOME/bin:$PATH'
+
+    - name: Source ~/.bashrc to apply environment variables
+      shell: source /root/.bashrc
+      args:
+        executable: /bin/bash
+
+    - name: Check Java version
+      command: java -version
+      register: java_version_output
+
+    - name: Display Java version
+      debug:
+        msg: "{{ java_version_output.stdout }}"
